@@ -1,4 +1,4 @@
-import {By, until, WebDriver} from 'selenium-webdriver';
+import {By, until, WebDriver, Key} from 'selenium-webdriver';
 import {Base} from '../base';
 import UiTestUtilities from '../UiTestUtilities';
 import * as Const from '../Constants';
@@ -9,6 +9,7 @@ const CREATE_APPLICATION_BUTTON_CANCEL: By = By.xpath('.//button[@qe-id="applica
 const CREATE_APPLICATION_FIELD_APP_NAME: By = By.xpath('.//input[@qeid="application-create-field-app-name"]');
 const CREATE_APPLICATION_FIELD_PROJECT: By = By.xpath('.//input[@qe-id="application-create-field-project"]');
 const CREATE_APPLICATION_FIELD_REPOSITORY_URL: By = By.xpath('.//input[@qe-id="application-create-field-repository-url"]');
+const CREATE_APPLICATION_FIELD_REPOSITORY_REVISION: By = By.xpath("//input[@value='HEAD']")
 const CREATE_APPLICATION_FIELD_REPOSITORY_PATH: By = By.xpath('.//input[@qe-id="application-create-field-path"]');
 
 const CREATE_APPLICATION_DROPDOWN_DESTINATION: By = By.xpath('.//div[@qe-id="application-create-dropdown-destination"]');
@@ -18,9 +19,9 @@ const CREATE_APPLICATION_DROPDOWN_MENU_NAME: By = By.xpath('.//li[@qe-id="applic
 export const DESTINATION_MENU_NAME: string = 'NAME';
 export const DESTINATION_MENU_URL: string = 'URL';
 
-const CREATE_APPLICATION_FIELD_CLUSTER_NAME: By = By.xpath('.//input[@qe-id="application-create-field-cluster-name"]');
-const CREATE_APPLICATION_FIELD_CLUSTER_NAMESPACE: By = By.xpath('.//input[@qeid="application-create-field-namespace"]');
-const CREATE_APPLICATION_FIELD_CLUSTER_URL: By = By.xpath('.//input[@qe-id="application-create-field-cluster-url"]');
+const CREATE_APPLICATION_FIELD_CLUSTER_NAME: By = By.xpath('.//input[@qe-id="application-create-field-cluster-url"]'); //is used for cluster URL
+const CREATE_APPLICATION_FIELD_CLUSTER_NAMESPACE: By = By.xpath('.//input[@qeid="application-create-field-namespace"]'); //destination cluster namespace
+const CREATE_APPLICATION_FIELD_CLUSTER_URL: By = By.xpath('.//input[@qe-id="application-create-field-cluster-url"]'); //destination cluster URL
 
 export class ApplicationCreatePanel extends Base {
     public constructor(driver: WebDriver) {
@@ -30,6 +31,7 @@ export class ApplicationCreatePanel extends Base {
     public async setAppName(appName: string): Promise<void> {
         try {
             const appNameField = await UiTestUtilities.findUiElement(this.driver, CREATE_APPLICATION_FIELD_APP_NAME);
+            await this.driver.wait(until.elementIsVisible(appNameField), 10000);
             await appNameField.sendKeys(appName);
         } catch (err: any) {
             UiTestUtilities.log('Error caught while setting app name: ' + err);
@@ -63,6 +65,63 @@ export class ApplicationCreatePanel extends Base {
             await path.sendKeys(sourceRepoPath);
         } catch (err: any) {
             UiTestUtilities.log('Error caught while setting source repo path: ' + err);
+            throw new Error(err);
+        }
+    }
+
+    public async setRepositoryRevision(repositoryRevision: string): Promise<void> {
+        try {
+            const revisionField = await UiTestUtilities.findUiElement(this.driver, CREATE_APPLICATION_FIELD_REPOSITORY_REVISION);
+            const currentValue = await revisionField.getAttribute('value');
+
+            // If the repositoryRevision is "HEAD", don't change the field's value
+            if (repositoryRevision === 'HEAD') {
+                UiTestUtilities.log('Repository revision is HEAD, skipping update.');
+                return; 
+            }
+
+            // If the repositoryRevision is not "HEAD", update the field's value
+            if (currentValue !== repositoryRevision) {
+                await revisionField.click(); 
+                UiTestUtilities.log('Repository revision is not HEAD, So clearing the values .');
+                await revisionField.sendKeys(Key.BACK_SPACE.repeat(20)); 
+                await revisionField.sendKeys(repositoryRevision);
+            }
+            
+        } catch (err: any) {
+            UiTestUtilities.log('Error caught while setting repository revision: ' + err);
+            throw new Error(err);
+        }
+    }
+
+    public async setSyncPolicy(syncPolicy: string): Promise<void> {
+        try {
+            // Locate the dropdown element
+            const dropdownXPath = By.xpath("//label[contains(text(),'Sync Policy')]/following-sibling::div");
+            const dropdownElement = await UiTestUtilities.findUiElement(this.driver, dropdownXPath);
+
+            // Check if the current sync policy is not 'Manual'
+            if (syncPolicy !== "Manual") {
+                UiTestUtilities.log("Sync policy is not 'Manual', selecting 'Automatic'.");
+                await dropdownElement.click();
+
+                // Locate the search box and enter "Automatic"
+                const searchBoxXPath = By.xpath("//label[contains(text(),'Sync Policy')]/following-sibling::div//input[@class='select__search']");
+                const searchBox = await UiTestUtilities.findUiElement(this.driver, searchBoxXPath);
+                await searchBox.sendKeys(syncPolicy);
+                UiTestUtilities.log(`Searched for '${syncPolicy}' in the dropdown.`);
+
+
+                // Locate the 'Automatic' option in the dropdown
+                const automaticOptionXPath = By.xpath("//label[text()='Sync Policy']/following-sibling::div[@class='select']//span[text()='Automatic']");
+                const automaticOption = await UiTestUtilities.findUiElement(this.driver, automaticOptionXPath);
+                // Click the 'Automatic' option
+                await automaticOption.click();
+            } else {
+                UiTestUtilities.log("Sync policy is 'Manual', no action required.");
+            }
+        } catch (err: any) {
+            UiTestUtilities.log('Error caught while setting sync policy: ' + err);
             throw new Error(err);
         }
     }
@@ -111,6 +170,7 @@ export class ApplicationCreatePanel extends Base {
 
     public async setDestinationClusterName(destinationClusterName: string): Promise<void> {
         try {
+            
             const clusterName = await UiTestUtilities.findUiElement(this.driver, CREATE_APPLICATION_FIELD_CLUSTER_NAME);
             await clusterName.sendKeys(destinationClusterName);
             // await clusterName.sendKeys('\r');
@@ -139,6 +199,7 @@ export class ApplicationCreatePanel extends Base {
             throw new Error(err);
         }
     }
+
 
     /**
      * Click the Create button to create the app
@@ -198,7 +259,9 @@ export class ApplicationCreatePanel extends Base {
         sourceRepoUrl: string,
         sourceRepoPath: string,
         destinationClusterName: string,
-        destinationNamespace: string
+        destinationNamespace: string,
+        syncPolicy: string, 
+        repositoryRevision: string 
     ): Promise<void> {
         UiTestUtilities.log('About to create application');
         try {
@@ -206,6 +269,8 @@ export class ApplicationCreatePanel extends Base {
             await this.setProjectName(projectName);
             await this.setSourceRepoUrl(sourceRepoUrl);
             await this.setSourceRepoPath(sourceRepoPath);
+            await this.setRepositoryRevision(repositoryRevision);
+            await this.setSyncPolicy(syncPolicy);
             await this.selectDestinationClusterNameMenu(destinationClusterName);
             await this.setDestinationNamespace(destinationNamespace);
             await this.clickCreateButton();
