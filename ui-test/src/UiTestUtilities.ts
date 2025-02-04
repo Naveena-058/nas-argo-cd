@@ -133,4 +133,16 @@ export default class UiTestUtilities {
             throw e;
         }
     }
+
+    public static async isElementPresent(driver: WebDriver, locator: By): Promise<boolean> {
+        try {
+            const elements = await driver.findElements(locator); // Find elements matching the locator
+            return elements.length > 0; // Return true if at least one element is found, otherwise false
+        } catch (error) {
+            console.error(`Error checking element presence: ${error}`);
+            return false; // Return false if an error occurs
+        }
+    }
+     
+    
 }

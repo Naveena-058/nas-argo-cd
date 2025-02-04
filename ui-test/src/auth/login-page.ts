@@ -3,6 +3,9 @@ import {Base} from '../base';
 import Configuration from '../Configuration';
 import UiTestUtilities from '../UiTestUtilities';
 
+const ADVANCED_BUTTON: By = By.css('button#details-button.secondary-button.small-link')
+const PROCEED_LINK: By = By.css('a#proceed-link.small-link')
+
 const LOGIN_FORM: By = By.css('#app .login__box form');
 const LOGIN_FORM_INPUT: By = By.css('input.argo-field');
 const LOGIN_FORM_BUTTON: By = By.css('button.argo-button');
@@ -16,6 +19,12 @@ export class AuthLoginPage extends Base {
      * Fill login form and submit it
      */
     public async loginWithCredentials() {
+
+        const advancedButton = await UiTestUtilities.findUiElement(this.driver, ADVANCED_BUTTON);
+        const proceedLink = await UiTestUtilities.findUiElement(this.driver, PROCEED_LINK);
+        
+        await advancedButton.click();
+        await proceedLink.click();
         const loginForm = await UiTestUtilities.findUiElement(this.driver, LOGIN_FORM);
         const inputs = await loginForm.findElements(LOGIN_FORM_INPUT);
         const submitButton = await loginForm.findElement(LOGIN_FORM_BUTTON);
