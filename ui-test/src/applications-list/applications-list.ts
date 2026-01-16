@@ -159,7 +159,7 @@ export class ApplicationsList extends Base {
     // By.css('#app .applications-tiles .applications-list-argocd_" + appName + "'');
 
     private getApplicationTileSelector(appName: string): string {
-        return './/div[contains(@class,"qe-applications-list-' + Configuration.ARGOCD_NAMESPACE + '_' + appName + '")]';
+        return './/div[contains(@class,"qe-applications-list-' + Configuration.DESTINATION_NAMESPACE + '_' + appName + '")]';
     }
 
     private getApplicationTileLocator(appName: string): By {
